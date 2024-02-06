@@ -1,0 +1,52 @@
+version: "3.5"
+
+services:
+  server:
+    container_name: bwgtt_server_container
+    build:
+      context: .
+      args:
+        POSTGRES__DBHOST: postgres_db_container
+    ports:
+      - 8000:81
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+        restart: true
+    restart: unless-stopped
+
+  postgres-db:
+    container_name: postgres_db_container
+    image: postgres
+    env_file:
+      - path: ./environments/.db.env
+    environment:
+      PGDATA: /data/postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./environments/scripts/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh
+      - postgres:/data/postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4
+    env_file:
+      - path: ./environments/.db.env
+    environment:
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - 5050:80
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    restart: unless-stopped
+
+volumes:
+  postgres:
+  pgadmin:
